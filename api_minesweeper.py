@@ -4,41 +4,54 @@ Implementation of a REST API interface to command the game
 
 from minesweeper import Board
 from fastapi import FastAPI
-
-class Minesweeper(Board):
-    def __init__(self, dim_size, num_bombs):
-        super().__init__(dim_size, num_bombs)
-        self.status = "playing"
-
-    
-    def get_visible_board(self):
-        # this is a magic function where if you call print on this object,
-        # it'll print out what this function returns!
-        # return a string that shows the board to the player
-
-        # first let's create a new array that represents what the user would see
-        visible_board = [[None for _ in range(self.dim_size)] for _ in range(self.dim_size)]
-        for row in range(self.dim_size):
-            for col in range(self.dim_size):
-                if (row,col) in self.dug:
-                    visible_board[row][col] = str(self.board[row][col])
-                else:
-                    visible_board[row][col] = ' '
-        
-        return visible_board
-
-    
-    def set_status(self, status):
-        self.status = status
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
 
-board = Minesweeper(10,10)
 
+# Mounting the static site for the UI. Can be launched with any web server
+app.mount("/web", StaticFiles(directory="web"), name="static")
+
+origins = [
+    "http://localhost",
+    "http://localhost:8000",
+    "http://localhost:5500",
+    "http://127.0.0.1",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:5500"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Main game
+board = Board(10,10)
+
+
+# The API Part
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+
+@app.get("/status")
+def get_status():
+    return {
+        "response":"ok",
+        "board": board.get_visible_board(),
+        "msg":"",
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
+    }
 
 
 @app.get("/visible_board")
@@ -48,14 +61,18 @@ def get_visible_board():
             "response":"ok",
             "board": board.get_visible_board(),
             "msg":"",
-            "status": board.status
+            "status": board.status,
+            "startTime": board.startTime,
+            "endTime": board.endTime,
         }
     
     return {
         "response":"ok",
         "board": board.board,
         "msg":"",
-        "status": board.status
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
     }
 
 
@@ -65,53 +82,116 @@ def get_board():
         "response":"ok",
         "board": board.board,
         "msg":"",
-        "status": board.status
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
     }
 
 
 @app.post("/dig/{row}/{col}")
-def dig(row, col):
-    
+def dig(row, col):   
     if int(row) < 0 or int(row) >= board.dim_size or int(col) < 0 or int(col) >= board.dim_size:
         return {
             "response":"ok",
             "board": board.get_visible_board(),
-            "msg":"Invalid location. Try again."
+            "msg":"Invalid location. Try again.",
+            "status": board.status,
+            "startTime": board.startTime,
+            "endTime": board.endTime,
         }
 
     # if it's valid, we dig
-    safe = board.dig(int(row), int(col))
-
-    if not safe:
-        board.set_status("loser")
-        return {
-            "response":"ok",
-            "board": board.board,
-            "msg":"loser"
-        }
-
-    if len(board.dug) == board.dim_size ** 2 - board.num_bombs:
-        board.set_status("winner")
-        return {
-            "response":"ok",
-            "board": board.board,
-            "msg":"winner"
-        }
+    board.dig(int(row), int(col))
 
     return {
         "response":"ok",
         "board": board.get_visible_board(),
         "msg":"",
-        "status": board.status
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
     }
 
 
-@app.post("newgame/")
-def new_game():
-    board = Minesweeper(10,10)
+@app.post("/superdig/{row}/{col}")
+def superdig(row, col):
+    row = int(row)
+    col =int(col)
+    
+    if row < 0 or row >= board.dim_size or col < 0 or col >= board.dim_size:
+        print("invalid location")
+        return {
+            "response":"ok",
+            "board": board.get_visible_board(),
+            "msg":"Invalid location. Try again.",
+            "status": board.status,
+            "startTime": board.startTime,
+            "endTime": board.endTime,
+        }
+
+    # if it's valid, we dig
+    for r in range(max(0, row-1), min(board.dim_size-1, row+1)+1):
+        for c in range(max(0, col-1), min(board.dim_size-1, col+1)+1):
+            if (r == row and c == col) or (r, c) in board.dug or (r, c) in board.bet:
+                # our original location, don't dig
+                continue
+            
+            # Dig
+            board.dig(r, c)
+
+            if board.status != "playing":
+                return {
+                    "response":"ok",
+                    "board": board.get_visible_board(),
+                    "msg":"",
+                    "status": board.status,
+                    "startTime": board.startTime,
+                    "endTime": board.endTime,
+                }
+
     return {
         "response":"ok",
         "board": board.get_visible_board(),
         "msg":"",
-        "status": board.status
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
+    }
+
+
+@app.post("/mark/{row}/{col}")
+def mark(row, col):
+    if int(row) < 0 or int(row) >= board.dim_size or int(col) < 0 or int(col) >= board.dim_size:
+        return {
+            "response":"ok",
+            "board": board.get_visible_board(),
+            "msg":"Invalid location. Try again.",
+            "status": board.status,
+            "startTime": board.startTime,
+            "endTime": board.endTime,
+        }
+
+    board.mark(int(row), int(col))
+
+    return {
+        "response":"ok",
+        "board": board.get_visible_board(),
+        "msg":"",
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
+    }
+
+
+@app.post("/newgame")
+def new_game():
+    global board
+    board = Board(10,10)
+    return {
+        "response":"ok",
+        "board": board.get_visible_board(),
+        "msg":"",
+        "status": board.status,
+        "startTime": board.startTime,
+        "endTime": board.endTime,
     }

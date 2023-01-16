@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>M I N E S W E E P E R</title>
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"> -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./minesweeper.css">
+</head>
+
+<body>
+    <div class="root">
+        <header>
+            <div class="icon">💣</div>
+            <div class="brand">
+                <h1>MINESWEEPER</h1>
+            </div>
+        </header>
+        <article>
+            <div id="wrapper"></div>
+        </article>
+        <div class="v-filler"></div>
+        <footer>
+            <div class="button" onclick="newGame()">
+                <h2>➕ NEW GAME</h2>
+            </div>
+            <div class="timer">
+                <h2>0</h2>
+            </div>
+        </footer>
+    </div>
+</body>
+<script src="./minesweeper.js"></script>
+</html>
